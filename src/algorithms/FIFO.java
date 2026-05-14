@@ -6,22 +6,27 @@ import java.util.*;
 public class FIFO implements PageAlgorithm {
     @Override
     public SimulationResult simulate(List<Integer> pages, int frameCount) {
-        Queue<Integer> frames = new LinkedList<>();
-        Set<Integer> memory = new HashSet<>();
+        List<Integer> frames = new ArrayList<>();
         int faults = 0;
+        List<List<Integer>> framesHistory = new ArrayList<>();
+        List<Boolean> faultHistory = new ArrayList<>();
 
         for (int page : pages) {
-            if (!memory.contains(page)) {
+            boolean fault = false;
+            if (!frames.contains(page)) {
+                fault = true;
                 faults++;
-                if (memory.size() == frameCount) {
-                    int oldest = frames.poll();
-                    memory.remove(oldest);
+                if (frames.size() < frameCount) {
+                    frames.add(page);
+                } else {
+                    frames.remove(0);
+                    frames.add(page);
                 }
-                frames.add(page);
-                memory.add(page);
             }
+            faultHistory.add(fault);
+            framesHistory.add(new ArrayList<>(frames));
         }
-        return new SimulationResult(getName(), faults);
+        return new SimulationResult(getName(), faults, pages, framesHistory, faultHistory);
     }
 
     @Override

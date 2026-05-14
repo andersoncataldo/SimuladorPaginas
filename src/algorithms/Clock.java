@@ -6,11 +6,11 @@ import java.util.*;
 public class Clock implements PageAlgorithm {
     private static class PageNode {
         int page;
-        boolean usedBit;
+        boolean referenced;
 
         PageNode(int page) {
             this.page = page;
-            this.usedBit = true;
+            this.referenced = true;
         }
     }
 
@@ -19,32 +19,45 @@ public class Clock implements PageAlgorithm {
         List<PageNode> frames = new ArrayList<>();
         int pointer = 0;
         int faults = 0;
+        List<List<Integer>> framesHistory = new ArrayList<>();
+        List<Boolean> faultHistory = new ArrayList<>();
 
         for (int page : pages) {
-            boolean found = false;
-            for (PageNode node : frames) {
-                if (node.page == page) {
-                    node.usedBit = true;
-                    found = true;
+            boolean fault = false;
+            int foundIndex = -1;
+            for (int i = 0; i < frames.size(); i++) {
+                if (frames.get(i).page == page) {
+                    foundIndex = i;
                     break;
                 }
             }
 
-            if (!found) {
+            if (foundIndex != -1) {
+                frames.get(foundIndex).referenced = true;
+            } else {
+                fault = true;
                 faults++;
                 if (frames.size() < frameCount) {
                     frames.add(new PageNode(page));
                 } else {
-                    while (frames.get(pointer).usedBit) {
-                        frames.get(pointer).usedBit = false;
+                    while (frames.get(pointer).referenced) {
+                        frames.get(pointer).referenced = false;
                         pointer = (pointer + 1) % frameCount;
                     }
-                    frames.set(pointer, new PageNode(page));
+                    frames.get(pointer).page = page;
+                    frames.get(pointer).referenced = true;
                     pointer = (pointer + 1) % frameCount;
                 }
             }
+            
+            faultHistory.add(fault);
+            List<Integer> currentFrames = new ArrayList<>();
+            for (PageNode node : frames) {
+                currentFrames.add(node.page);
+            }
+            framesHistory.add(currentFrames);
         }
-        return new SimulationResult(getName(), faults);
+        return new SimulationResult(getName(), faults, pages, framesHistory, faultHistory);
     }
 
     @Override

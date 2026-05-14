@@ -9,28 +9,39 @@ public class NFU implements PageAlgorithm {
         Map<Integer, Integer> counters = new HashMap<>();
         List<Integer> frames = new ArrayList<>();
         int faults = 0;
+        List<List<Integer>> framesHistory = new ArrayList<>();
+        List<Boolean> faultHistory = new ArrayList<>();
 
         for (int page : pages) {
+            boolean fault = false;
             if (!frames.contains(page)) {
+                fault = true;
                 faults++;
-                if (frames.size() == frameCount) {
-                    int pageToReplace = frames.stream()
-                            .min(Comparator.comparingInt(counters::get))
-                            .orElse(frames.get(0));
-                    
-                    frames.remove(Integer.valueOf(pageToReplace));
-                    // Optional: we can keep the counter or remove it. 
-                    // Usually NFU counters persist or are reset. 
-                    // Let's stick to a simple version where we remove it to keep the map small.
-                    counters.remove(pageToReplace);
+                if (frames.size() < frameCount) {
+                    frames.add(page);
+                } else {
+                    int minCount = Integer.MAX_VALUE;
+                    int pageToReplace = -1;
+                    int replaceIndex = -1;
+
+                    for (int i = 0; i < frames.size(); i++) {
+                        int p = frames.get(i);
+                        int count = counters.getOrDefault(p, 0);
+                        if (count < minCount) {
+                            minCount = count;
+                            pageToReplace = p;
+                            replaceIndex = i;
+                        }
+                    }
+                    frames.remove(replaceIndex);
+                    frames.add(page);
                 }
-                frames.add(page);
-                counters.put(page, 1);
-            } else {
-                counters.put(page, counters.get(page) + 1);
             }
+            counters.put(page, counters.getOrDefault(page, 0) + 1);
+            faultHistory.add(fault);
+            framesHistory.add(new ArrayList<>(frames));
         }
-        return new SimulationResult(getName(), faults);
+        return new SimulationResult(getName(), faults, pages, framesHistory, faultHistory);
     }
 
     @Override

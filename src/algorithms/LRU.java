@@ -6,23 +6,30 @@ import java.util.*;
 public class LRU implements PageAlgorithm {
     @Override
     public SimulationResult simulate(List<Integer> pages, int frameCount) {
-        LinkedHashMap<Integer, Integer> memory = new LinkedHashMap<>(frameCount, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
-                return size() > frameCount;
-            }
-        };
-        
+        List<Integer> frames = new ArrayList<>();
         int faults = 0;
+        List<List<Integer>> framesHistory = new ArrayList<>();
+        List<Boolean> faultHistory = new ArrayList<>();
+
         for (int page : pages) {
-            if (!memory.containsKey(page)) {
+            boolean fault = false;
+            if (!frames.contains(page)) {
+                fault = true;
                 faults++;
-                memory.put(page, 1);
+                if (frames.size() < frameCount) {
+                    frames.add(page);
+                } else {
+                    frames.remove(0);
+                    frames.add(page);
+                }
             } else {
-                memory.get(page); // Access to trigger reordering
+                frames.remove(Integer.valueOf(page));
+                frames.add(page);
             }
+            faultHistory.add(fault);
+            framesHistory.add(new ArrayList<>(frames));
         }
-        return new SimulationResult(getName(), faults);
+        return new SimulationResult(getName(), faults, pages, framesHistory, faultHistory);
     }
 
     @Override
